@@ -2,29 +2,29 @@ Introduction
 ============
 
 Following discussions during the Vancouver OpenStack summit about the
-level of technical debt of patches in packages, I have created a
-prototype to explore these ideas.
+level of technical debt of patches in packages, the prototyped tools
+were created to explore these ideas.
 
 Each package has a score which is the sum of the scores from each
 patch using the following rules:
 
-Not submitted upstream -> +200
-Abandoned upstream -> +150
-Not merged upstream -> +20
-Merged upstream -> +10
-Cherry-picked upstream -> +10
-Do not pass Jenkins -> +50
-Got a +2 -> -10
-Lowest vote is -2 -> +100
-Lowest vote is -1 -> +50
-Lowest vote is +1 -> -5
-Difference to upstream patchset is null -> 0
-Difference to upstream patchset is small -> +10
-Difference to upstream patchset is big -> +100
+* Not submitted upstream -> +200
+* Abandoned upstream -> +150
+* Not merged upstream -> +20
+* Merged upstream -> +10
+* Cherry-picked upstream -> +10
+* Do not pass Jenkins -> +50
+* Got a +2 -> -10
+* Lowest vote is -2 -> +100
+* Lowest vote is -1 -> +50
+* Lowest vote is +1 -> -5
+* Difference to upstream patchset is null -> 0
+* Difference to upstream patchset is small -> +10
+* Difference to upstream patchset is big -> +100
 
-For not gerrit managed project (mainly outside of OpenStack), I try to
-follow upstream submission using cherry-pick comments so it's less
-precise.
+For not gerrit managed project (mainly outside of OpenStack), the tool
+tries to follow upstream submission using cherry-pick comments so it's
+less precise.
 
 Actions
 =======
