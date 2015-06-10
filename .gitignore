@@ -1,7 +1,6 @@
 *~
- __pycache__
- *.pyc
- srpms
- results
- .coverage
- 
+__pycache__
+*.pyc
+srpms
+results
+.coverage
