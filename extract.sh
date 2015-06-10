@@ -58,41 +58,49 @@ esac
 
 git="$2/$project"
 
+try_cherry_pick() {
+    if cd $git; then
+        commitid=$(sed -n -e 's/.*cherry picked from commit \([0-9a-f]\{40\}\).*/\1/p' < $patchrpm | head -1)
+        if [ -n "$commitid" ]; then
+            git fetch origin master
+            git show $commitid > $patchrpm.git
+            interdiff -q --no-revert-omitted -w $patchrpm $patchrpm.git > "$target/$patch/interdiff.patch"
+            cat > "$target/$patch/review.json" <<EOF
+{"status":"CHERRY", "commit":"$commitid"}
+EOF
+        else
+            cat > "$target/$patch/review.json" <<EOF
+{"status":"NONE"}
+EOF
+            cp $patchrpm "$target/$patch/interdiff.patch"
+        fi
+    else
+        echo "ERROR no git repo for $project" 1>&2
+        cat > "$target/$patch/review.json" <<EOF
+{"status":"NONE"}
+EOF
+        cp $patchrpm "$target/$patch/interdiff.patch"
+    fi
+    diffstat -t < "$target/$patch/interdiff.patch" > "$target/$patch/interdiff.diffstat"
+}
+
 set -x
 
 temp=$(mktemp -d)
 rpm2cpio "$pkg"|(cd $temp; cpio -id)
 rm -rf "$target"
 mkdir -p "$target"
+cp $temp/*.spec "$target"
 for patchrpm in $(ls $temp/*.patch); do
-    chgid=$(sed -n -e 's/Change-Id: //p' $patchrpm|tail -1)
+    chgid=$(sed -n -e 's/Upstream-Change-Id: //p' $patchrpm|tail -1)
+    if [ -z "$chgid" ]; then
+        chgid=$(sed -n -e 's/Change-Id: //p' $patchrpm|tail -1)
+    fi
     patch=$(basename $patchrpm)
     mkdir -p "$target/$patch"
     cp $patchrpm "$target/$patch/patch"
     if [ -z "$chgid" ]; then
-        if cd $git; then
-            commitid=$(sed -n -e 's/.*cherry picked from commit \([0-9a-f]\{40\}\).*/\1/p' < $patchrpm)
-            if [ -n "$commitid" ]; then
-                git fetch origin master
-                git show $commitid > $patchrpm.git
-                interdiff -q --no-revert-omitted -w $patchrpm $patchrpm.git > "$target/$patch/interdiff.patch"
-                cat > "$target/$patch/review.json" <<EOF
-{"status":"CHERRY", "commit":"$commitid"}
-EOF
-            else
-                cat > "$target/$patch/review.json" <<EOF
-{"status":"NONE"}
-EOF
-                cp $patchrpm "$target/$patch/interdiff.patch"
-            fi
-        else
-            echo "ERROR no git repo for $project" 1>&2
-            cat > "$target/$patch/review.json" <<EOF
-{"status":"NONE"}
-EOF
-            cp $patchrpm "$target/$patch/interdiff.patch"
-        fi
-        diffstat -t < "$target/$patch/interdiff.patch" > "$target/$patch/interdiff.diffstat"
+        try_cherry_pick
         continue
     fi
     cd $git || echo "ERROR no git repo for $project" 1>&2
@@ -117,13 +125,10 @@ EOF
         ssh -p $port $username@$host gerrit query --all-approvals --current-patch-set --format JSON $chgid branch:master > "$target/$patch/review.json"
         diffstat -t < "$target/$patch/interdiff.patch" > "$target/$patch/interdiff.diffstat"
     else
-        diffstat -t < "$target/$patch/interdiff.patch" > "$target/$patch/interdiff.diffstat"
-        cat > "$target/$patch/review.json" <<EOF
-{"status":"NONE"}
-EOF
+        try_cherry_pick
     fi
 done
 
 rm -rf $temp
 
-# get-info.sh ends here
+# extract.sh ends here
