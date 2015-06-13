@@ -18,14 +18,15 @@
 
 top=$(cd $(dirname $0); pwd)
 
-if [ $# != 3 ]; then
-    echo "Usage: $0 <git top dir> <exclude> <urlpath without http://>" 1>&2
+if [ $# != 4 ]; then
+    echo "Usage: $0 <git top dir> <exclude> <urlpath without http://>" "<branch>" 1>&2
     exit 1
 fi
 
 gitdir="$1"
 exclude="$2"
 urlpath="$3"
+branch="$4"
 date=${DATE:=$(date '+%Y%m%d')}
 name=$(basename $(dirname $urlpath))
 
@@ -39,12 +40,12 @@ resultdir=$top/results/$name/$date
 mkdir -p $resultdir
 for p in $urlpath/*.src.rpm; do
     if [ ! -d $resultdir/$(basename $p) ]; then
-        $top/extract.sh $p $gitdir $exclude $resultdir
+        $top/extract.sh $p $gitdir $exclude $resultdir $branch
     fi
     if [ -d $resultdir/$(basename $p) ]; then
         $top/score.py $resultdir/$(basename $p) > $resultdir/$(basename $p)/score 2> $resultdir/$(basename $p)/score.html
     fi
-done 2>&1 | tee $resultdir/log
+done
 
 echo "<h2>Global score is a technical debt assessment, the lower, the better</h2>"> $resultdir/score.html
 global=0

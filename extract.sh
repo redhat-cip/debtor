@@ -16,8 +16,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-if [ $# != 4 ]; then
-    echo "Usage: $0 <src.rpm> <git top dir> <exclude file> <target dir>" 1>&2
+if [ $# != 5 ]; then
+    echo "Usage: $0 <src.rpm> <git top dir> <exclude file> <target dir> <branch>" 1>&2
     exit 1
 fi
 
@@ -26,6 +26,7 @@ pkg="$1"
 base=$(basename $pkg)
 exclude="$3"
 target="$4/$base"
+branch="$5"
 project=$(echo $base|sed -e 's/^openstack-//' -e 's/-[0-9A-Z].*//')
 
 # hack to avoid interdiff calling patch interactively
@@ -104,13 +105,14 @@ for patchrpm in $(ls $temp/*.patch); do
         continue
     fi
     cd $git || echo "ERROR no git repo for $project" 1>&2
-    git review -d $chgid
+    git review -d $chgid $branch
     ex=$?
     if [ $ex = 0 ]; then
         patchgit=$(git format-patch -1 HEAD)
         interdiff -q --no-revert-omitted -w $patchrpm $git/$patchgit > "$target/$patch/interdiff.patch"
         ret=$?
-        rm -f $patchgit
+        cp $git/$patchgit "$target/$patch/review.patch"
+        rm -f $git/$patchgit
         got_patchset=1
     else
         ret=1
@@ -122,7 +124,10 @@ for patchrpm in $(ls $temp/*.patch); do
     if [ $got_patchset = 1 -a -r .gitreview ]; then
         eval $(fgrep = .gitreview)
         username=$(git config gitreview.username)
-        ssh -p $port $username@$host gerrit query --all-approvals --current-patch-set --format JSON $chgid branch:master > "$target/$patch/review.json"
+        ssh -p $port $username@$host gerrit query --all-approvals --current-patch-set --format JSON $chgid branch:$branch > "$target/$patch/review.json"
+        if [ ! -f "$target/$patch/review.json" -o $(wc -l "$target/$patch/review.json"|cut -f1 -d' ') -le 1 ]; then
+            ssh -p $port $username@$host gerrit query --all-approvals --current-patch-set --format JSON $chgid branch:master > "$target/$patch/review.json"
+        fi
         diffstat -t < "$target/$patch/interdiff.patch" > "$target/$patch/interdiff.diffstat"
     else
         try_cherry_pick
