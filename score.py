@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2015 Red Hat Inc
+# Copyright (C) 2015 Red Hat, Inc.
 #
 # Author: Frederic Lepied <frederic.lepied@redhat.com>
 #
@@ -62,7 +62,8 @@ def score_review(review_json_str, patch, exceptions):
              % (patch, data['id']))
         return 150
     elif data['status'] == 'CHERRY':
-        html('<a href="%s/patch">Patch</a> cherry-picked upstream -> +10')
+        html('<a href="%s/patch">Patch</a> cherry-picked upstream -> +10' %
+             patch)
         return 10
     else:
         html('<a href="%s/patch">Patch</a> has unknown status: %s -> +200'
