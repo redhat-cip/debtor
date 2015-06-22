@@ -53,6 +53,8 @@ for f in $resultdir/*/score; do
     global=$(($(cat $f) + $global))
 done
 echo "<h3>Score for the set of packages: $global</h3>" >> $resultdir/score.html
+echo "Date: $date<br/>" >> $resultdir/score.html
+echo "Packages: <a href=\"http://$urlpath\">http://$urlpath</a> <br/> <br/>" >> $resultdir/score.html
 echo "<table>" >> $resultdir/score.html
 for f in $resultdir/*/score; do
     echo "$(cat $f) $(basename $(dirname $f))"
