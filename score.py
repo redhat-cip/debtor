@@ -27,70 +27,66 @@ import re
 import sys
 
 
-def html(*items):
+def html(out, *items):
     for item in items:
-        sys.stderr.write(item + '<br/>\n')
+        out.write(item + '<br/>\n')
 
 
-def score_review(review_json_str, patch, exceptions):
+def score_review(review_json_str, patch, exceptions,
+                 review_url="https://review.openstack.org/#/q/%s,n,z"):
     data = json.loads(review_json_str)
-    score = 0
+    score = []
     if 'type' in data and data['type'] == 'stats' \
        or data['status'] == 'NONE':
         for exception in exceptions:
             if re.search(exception, patch):
-                html('<a href="%s/patch">Patch</a> is downstream only -> +50'
-                     % patch)
-                return 50
+                return ((50,
+                         '<a href="%s/patch">Patch</a>'
+                        ' is downstream only -> +50'
+                         % patch),)
         else:
-            html('<a href="%s/patch">Patch</a> not submitted upstream -> +200'
-                 % patch)
-            return 200
+            return ((200, '<a href="%s/patch">Patch</a> '
+                     'not submitted upstream -> +200'
+                     % patch),)
     elif data['status'] == 'NEW':
-        html('<a href="%s/patch">Patch</a> not merged upstream -> +20 '
-             '(<a href="https://review.openstack.org/#/q/%s,n,z">review</a>)'
-             % (patch, data['id']))
-        score += 20
+        score.append(
+            (20, ('<a href="%s/patch">Patch</a> not merged upstream -> +20 '
+                  '(<a href="%s">review</a>)'
+                  % (patch, review_url % data['id']))))
     elif data['status'] == 'MERGED':
-        html('<a href="%s/patch">Patch</a> merged upstream -> +10 '
-             '(<a href="https://review.openstack.org/#/q/%s,n,z">review</a>)'
-             % (patch, data['id']))
-        return 10
+        return ((10, '<a href="%s/patch">Patch</a> merged upstream -> +10 '
+                 '(<a href="%s">review</a>)'
+                 % (patch, review_url % data['id'])),)
     elif data['status'] == 'ABANDONED':
-        html('<a href="%s/patch">Patch</a> abandoned upstream -> +150 '
-             '(<a href="https://review.openstack.org/#/q/%s,n,z">review</a>)'
-             % (patch, data['id']))
-        return 150
+        return ((150, '<a href="%s/patch">Patch</a> '
+                 'abandoned upstream -> +150 '
+                 '(<a href="%s">review</a>)'
+                 % (patch, review_url % data['id'])),)
     elif data['status'] == 'CHERRY':
-        html('<a href="%s/patch">Patch</a> cherry-picked upstream -> +10' %
-             patch)
-        return 10
+        return ((10, '<a href="%s/patch">Patch</a> '
+                 'cherry-picked upstream -> +10' %
+                 patch),)
     else:
-        html('<a href="%s/patch">Patch</a> has unknown status: %s -> +200'
-             % (patch, data['status']))
-        return 200
+        return ((200, '<a href="%s/patch">Patch</a> '
+                 'has unknown status: %s -> +200'
+                 % (patch, data['status'])),)
     lowest = 3
     for approval in data['patchSets'][-1]['approvals']:
         if (approval['type'] == 'Verified' and
            approval['by']['username'] == 'jenkins'):
             if approval['value'] == '-1':
-                html('Do not pass Jenkins -> +50')
-                score += 50
+                score.append((50, 'Do not pass Jenkins -> +50'))
         elif approval['type'] == 'Code-Review':
             if lowest > int(approval['value']):
                 lowest = int(approval['value'])
             if approval['value'] == '+2':
-                html('Got a +2 -> -10')
-                score -= 10
+                score.append((-10, 'Got a +2 -> -10'))
     if lowest == -2:
-        html('Lowest vote is -2 -> +100')
-        score += 100
+        score.append((100, 'Lowest vote is -2 -> +100'))
     elif lowest == -1:
-        html('Lowest vote is -1 -> +50')
-        score += 50
+        score.append((50, 'Lowest vote is -1 -> +50'))
     elif lowest == 1:
-        html('Lowest vote is +1 -> -5')
-        score -= 5
+        score.append((-5, 'Lowest vote is +1 -> -5'))
     return score
 
 
@@ -100,17 +96,14 @@ def score_interdiff(interdiff_lines, patch):
         elts = line.split(',')
         changes += int(elts[0]) + int(elts[1]) + int(elts[2])
     if changes == 0:
-        html('Difference to upstream patchset is null -> 0 '
-             '(<a href="%s/interdiff.patch">interdiff</a>)' % patch)
-        return 0
+        return (0, 'Difference to upstream patchset is null -> 0 '
+                '(<a href="%s/interdiff.patch">interdiff</a>)' % patch)
     elif changes <= 25:
-        html('Difference to upstream patchset is small -> +10 '
-             '(<a href="%s/interdiff.patch">interdiff</a>)' % patch)
-        return 10
+        return (10, 'Difference to upstream patchset is small -> +10 '
+                '(<a href="%s/interdiff.patch">interdiff</a>)' % patch)
     else:
-        html('Difference to upstream patchset is big -> +100 '
-             '(<a href="%s/interdiff.patch">interdiff</a>)' % patch)
-        return 100
+        return (100, 'Difference to upstream patchset is big -> +100 '
+                '(<a href="%s/interdiff.patch">interdiff</a>)' % patch)
 
 
 def main():
@@ -121,6 +114,7 @@ def main():
     }
 
     target_name = os.path.basename(sys.argv[1])
+    out = open(os.path.join(sys.argv[1], 'score.html'), 'w')
 
     for package_name in exceptions:
         if target_name[:len(package_name)] == package_name:
@@ -131,21 +125,26 @@ def main():
 
     for path in sorted(glob.glob(os.path.join(sys.argv[1], '*.patch'))):
         patch = os.path.basename(path)
-        sys.stderr.write('<h3><a href=\"%s\">%s</a></h3>\n' % (patch, patch))
-        score = score_review(
+        out.write('<h3><a href=\"%s\">%s</a></h3>\n' % (patch, patch))
+        scores = score_review(
             open(os.path.join(path, 'review.json')).readline(),
             patch, exception)
-        global_score += score
-        html('')
-        score = score_interdiff(
+        for score, reason in scores:
+            html(out, reason)
+            global_score += score
+        html(out, '')
+        score, reason = score_interdiff(
             open(
                 os.path.join(
                     path, 'interdiff.diffstat')).readlines(), patch)
         global_score += score
-        html('')
+        html(out, reason)
+        html(out, '')
 
-    html('<hr/>Global score %d' % global_score)
+    html(out, '<hr/>Global score %d' % global_score)
     print(global_score)
+
+    out.close()
 
 if __name__ == "__main__":
     main()

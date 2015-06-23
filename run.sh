@@ -43,7 +43,7 @@ for p in $urlpath/*.src.rpm; do
         $top/extract.sh $p $gitdir $exclude $resultdir $branch
     fi
     if [ -d $resultdir/$(basename $p) ]; then
-        $top/score.py $resultdir/$(basename $p) > $resultdir/$(basename $p)/score 2> $resultdir/$(basename $p)/score.html
+        $top/score.py $resultdir/$(basename $p) > $resultdir/$(basename $p)/score
     fi
 done
 

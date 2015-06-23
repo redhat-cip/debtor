@@ -20,108 +20,124 @@ import unittest
 import score
 
 
+def sum_first(li):
+    return sum(item for item, _ in li)
+
+
 class TestScore(unittest.TestCase):
 
     def test_score_review_none(self):
         self.assertEqual(
-            score.score_review('{"type": "stats", "status": "NONE"}',
-                               'patch', ()), 200)
+            sum_first(
+                score.score_review('{"type": "stats", "status": "NONE"}',
+                                   'patch', ())), 200)
 
     def test_score_review_exception(self):
         self.assertEqual(
-            score.score_review('{"type": "stats", "status": "NONE"}',
-                               'patch', ('patch')), 50)
+            sum_first(
+                score.score_review('{"type": "stats", "status": "NONE"}',
+                                   'patch', ('patch'))), 50)
 
     def test_score_review_new(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"NEW","id":"id",'
-                '"patchSets":[{"approvals":[{"type": "verified"}]}]}',
-                'patch', ()), 20)
+            sum_first(
+                score.score_review(
+                    '{"status":"NEW","id":"id",'
+                    '"patchSets":[{"approvals":[{"type": "verified"}]}]}',
+                    'patch', ())), 20)
 
     def test_score_review_merged(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"MERGED","id":"id"}',
-                'patch', ()), 10)
+            sum_first(
+                score.score_review(
+                    '{"status":"MERGED","id":"id"}',
+                    'patch', ())), 10)
 
     def test_score_review_abandoned(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"ABANDONED","id":"id",'
-                '"patchSets":[{"approvals":[{"type": "verified"}]}]}',
-                'patch', ()), 150)
+            sum_first(
+                score.score_review(
+                    '{"status":"ABANDONED","id":"id",'
+                    '"patchSets":[{"approvals":[{"type": "verified"}]}]}',
+                    'patch', ())), 150)
 
     def test_score_review_cherry(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"CHERRY","id":"id"}',
-                'patch', ()), 10)
+            sum_first(
+                score.score_review(
+                    '{"status":"CHERRY","id":"id"}',
+                    'patch', ())), 10)
 
     def test_score_review_unknown(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"UNKNOWN","id":"id"}',
-                'patch', ()), 200)
+            sum_first(
+                score.score_review(
+                    '{"status":"UNKNOWN","id":"id"}',
+                    'patch', ())), 200)
 
     def test_score_review_no_jenkins(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"NEW","id":"id",'
-                '"patchSets":[{"approvals":'
-                '[{"type": "Verified","by": {"username":"jenkins"},'
-                '"value": "-1"}]}]}',
-                'patch', ()), 70)
+            sum_first(
+                score.score_review(
+                    '{"status":"NEW","id":"id",'
+                    '"patchSets":[{"approvals":'
+                    '[{"type": "Verified","by": {"username":"jenkins"},'
+                    '"value": "-1"}]}]}',
+                    'patch', ())), 70)
 
     def test_score_review_negative1_vote(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"NEW","id":"id",'
-                '"patchSets":[{"approvals":'
-                '[{"type": "Code-Review",'
-                '"value": "-1"}]}]}',
-                'patch', ()), 70)
+            sum_first(
+                score.score_review(
+                    '{"status":"NEW","id":"id",'
+                    '"patchSets":[{"approvals":'
+                    '[{"type": "Code-Review",'
+                    '"value": "-1"}]}]}',
+                    'patch', ())), 70)
 
     def test_score_review_negative2_vote(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"NEW","id":"id",'
-                '"patchSets":[{"approvals":'
-                '[{"type": "Code-Review",'
-                '"value": "-2"}]}]}',
-                'patch', ()), 120)
+            sum_first(
+                score.score_review(
+                    '{"status":"NEW","id":"id",'
+                    '"patchSets":[{"approvals":'
+                    '[{"type": "Code-Review",'
+                    '"value": "-2"}]}]}',
+                    'patch', ())), 120)
 
     def test_score_review_positive_vote(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"NEW","id":"id",'
-                '"patchSets":[{"approvals":'
-                '[{"type": "Code-Review",'
-                '"value": "+1"}]}]}',
-                'patch', ()), 15)
+            sum_first(
+                score.score_review(
+                    '{"status":"NEW","id":"id",'
+                    '"patchSets":[{"approvals":'
+                    '[{"type": "Code-Review",'
+                    '"value": "+1"}]}]}',
+                    'patch', ())), 15)
 
     def test_score_review_positive2_vote(self):
         self.assertEqual(
-            score.score_review(
-                '{"status":"NEW","id":"id",'
-                '"patchSets":[{"approvals":'
-                '[{"type": "Code-Review",'
-                '"value": "+2"}]}]}',
-                'patch', ()), 10)
+            sum_first(
+                score.score_review(
+                    '{"status":"NEW","id":"id",'
+                    '"patchSets":[{"approvals":'
+                    '[{"type": "Code-Review",'
+                    '"value": "+2"}]}]}',
+                    'patch', ())), 10)
 
     def test_score_interdiff(self):
         self.assertEqual(
-            score.score_interdiff(['', '0,0,0'], 'patch'),
+            score.score_interdiff(['', '0,0,0'], 'patch')[0],
             0)
 
     def test_score_interdiff_small(self):
         self.assertEqual(
-            score.score_interdiff(['', '1,0,0'], 'patch'),
+            score.score_interdiff(['', '1,0,0'], 'patch')[0],
             10)
 
     def test_score_interdiff_big(self):
         self.assertEqual(
-            score.score_interdiff(['', '26,0,0'], 'patch'),
+            score.score_interdiff(['', '26,0,0'], 'patch')[0],
             100)
 
 if __name__ == "__main__":
