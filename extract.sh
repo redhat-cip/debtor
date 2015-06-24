@@ -21,46 +21,48 @@ if [ $# != 5 ]; then
     exit 1
 fi
 
+set -x
+
 top=$(cd $(dirname $0); pwd)
 pkg="$1"
 base=$(basename $pkg)
 exclude="$3"
 target="$4/$base"
 branch="$5"
-project=$(echo $base|sed -e 's/^openstack-//' -e 's/-[0-9A-Z].*//')
+gitproject=$(echo $base|sed -e 's/^openstack-//' -e 's/-[0-9A-Z].*//')
 
 # hack to avoid interdiff calling patch interactively
 PATH=$top/hack:$PATH
 
 # project we don't want to process
-if grep -q "^$project\$" $exclude; then
-    echo "$project on the exclude list. Stopping." 1>&2
+if grep -q "^$gitproject\$" $exclude; then
+    echo "$gitproject on the exclude list. Stopping." 1>&2
     exit 0
 fi
 
 # translate package name to git repo name
-case $project in
+case $gitproject in
     tempest-kilo)
-        project=tempest
+        gitproject=tempest
         ;;
     swift-plugin-swift3)
-        project=swift3
+        gitproject=swift3
         ;;
     python-django-openstack-auth)
-        project=django_openstack_auth
+        gitproject=django_openstack_auth
         ;;
     qemu-kvm-rhev)
-        project=qemu
+        gitproject=qemu
         ;;
     python-django-horizon)
-        project=horizon
+        gitproject=horizon
         ;;
 esac
 
-git="$2/$project"
+git="$2/$gitproject"
 
 try_cherry_pick() {
-    if cd $git; then
+    if cd $git/$subdir; then
         commitid=$(sed -n -e 's/.*cherry picked from commit \([0-9a-f]\{40\}\).*/\1/p' < $patchrpm | head -1)
         if [ -n "$commitid" ]; then
             git fetch origin master
@@ -76,7 +78,7 @@ EOF
             cp $patchrpm "$target/$patch/interdiff.patch"
         fi
     else
-        echo "ERROR no git repo for $project" 1>&2
+        echo "ERROR no git repo for $gitproject" 1>&2
         cat > "$target/$patch/review.json" <<EOF
 {"status":"NONE"}
 EOF
@@ -85,14 +87,18 @@ EOF
     diffstat -t < "$target/$patch/interdiff.patch" > "$target/$patch/interdiff.diffstat"
 }
 
-set -x
-
 temp=$(mktemp -d)
 rpm2cpio "$pkg"|(cd $temp; cpio -id)
 rm -rf "$target"
 mkdir -p "$target"
 cp $temp/*.spec "$target"
 for patchrpm in $(ls $temp/*.patch); do
+    echo "Processing $patchrpm..."
+    if [ $gitproject = puppet-modules ]; then
+        subdir=$(grep -- '^--- ' $patchrpm|sed 's@[^/]*/\([^/]*\)/.*@\1@p'|head -1)
+    else
+        subdir=
+    fi
     chgid=$(sed -n -e 's/Upstream-Change-Id: //p' $patchrpm|tail -1)
     if [ -z "$chgid" ]; then
         chgid=$(sed -n -e 's/Change-Id: //p' $patchrpm|tail -1)
@@ -104,15 +110,15 @@ for patchrpm in $(ls $temp/*.patch); do
         try_cherry_pick
         continue
     fi
-    cd $git || echo "ERROR no git repo for $project" 1>&2
+    cd $git/$subdir || echo "ERROR no git repo for $gitproject $subdir" 1>&2
     git review -d $chgid $branch
     ex=$?
     if [ $ex = 0 ]; then
         patchgit=$(git format-patch -1 HEAD)
-        interdiff -q --no-revert-omitted -w $patchrpm $git/$patchgit > "$target/$patch/interdiff.patch"
+        interdiff -q --no-revert-omitted -w $patchrpm $git/$subdir/$patchgit > "$target/$patch/interdiff.patch"
         ret=$?
-        cp $git/$patchgit "$target/$patch/review.patch"
-        rm -f $git/$patchgit
+        cp $git/$subdir/$patchgit "$target/$patch/review.patch"
+        rm -f $git/$subdir/$patchgit
         got_patchset=1
     else
         ret=1
