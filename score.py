@@ -71,16 +71,18 @@ def score_review(review_json_str, patch, exceptions,
                  'has unknown status: %s -> +200'
                  % (patch, data['status'])),)
     lowest = 3
-    for approval in data['patchSets'][-1]['approvals']:
-        if (approval['type'] == 'Verified' and
-           approval['by']['username'] == 'jenkins'):
-            if approval['value'] == '-1':
-                score.append((50, 'Do not pass Jenkins -> +50'))
-        elif approval['type'] == 'Code-Review':
-            if lowest > int(approval['value']):
-                lowest = int(approval['value'])
-            if approval['value'] == '+2':
-                score.append((-10, 'Got a +2 -> -10'))
+    if ('patchSets' in data and len(data['patchSets']) > 0 and
+       'approvals' in data['patchSets'][-1]):
+        for approval in data['patchSets'][-1]['approvals']:
+            if (approval['type'] == 'Verified' and
+               approval['by']['username'] == 'jenkins'):
+                if approval['value'] == '-1':
+                    score.append((50, 'Do not pass Jenkins -> +50'))
+            elif approval['type'] == 'Code-Review':
+                if lowest > int(approval['value']):
+                    lowest = int(approval['value'])
+                if approval['value'] == '+2':
+                    score.append((-10, 'Got a +2 -> -10'))
     if lowest == -2:
         score.append((100, 'Lowest vote is -2 -> +100'))
     elif lowest == -1:
