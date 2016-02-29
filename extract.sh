@@ -66,11 +66,17 @@ try_cherry_pick() {
         commitid=$(sed -n -e 's/.*cherry picked from commit \([0-9a-f]\{40\}\).*/\1/p' < $patchrpm | head -1)
         if [ -n "$commitid" ]; then
             git fetch origin master
-            git show $commitid > $patchrpm.git
-            interdiff -q --no-revert-omitted -w $patchrpm $patchrpm.git > "$target/$patch/interdiff.patch"
-            cat > "$target/$patch/review.json" <<EOF
+            if git show $commitid > $patchrpm.git; then
+                interdiff -q --no-revert-omitted -w $patchrpm $patchrpm.git > "$target/$patch/interdiff.patch"
+                cat > "$target/$patch/review.json" <<EOF
 {"status":"CHERRY", "commit":"$commitid"}
 EOF
+            else
+                cat > "$target/$patch/review.json" <<EOF
+{"status":"NONE"}
+EOF
+            cp $patchrpm "$target/$patch/interdiff.patch"
+            fi
         else
             cat > "$target/$patch/review.json" <<EOF
 {"status":"NONE"}

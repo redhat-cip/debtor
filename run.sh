@@ -32,9 +32,7 @@ name=$(basename $(dirname $urlpath))
 
 mkdir -p $top/srpms/$name/$date
 cd $top/srpms/$name/$date
-if [ ! -d $urlpath ]; then
-    wget --level=1 --recursive --no-parent --accept 'src.rpm' http://$urlpath
-fi
+wget --level=1 --recursive --no-parent --no-clobber --accept 'src.rpm' http://$urlpath
 
 resultdir=$top/results/$name/$date
 mkdir -p $resultdir

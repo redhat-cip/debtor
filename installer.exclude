@@ -1,3 +1,10 @@
 openwsman
 python-d2to1
 python-pbr
+ipxe
+fio
+Cython
+sysbench
+python-dracclient
+python-proliantutils
+python-flask-babel

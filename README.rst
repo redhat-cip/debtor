@@ -61,5 +61,5 @@ How to contribute
 =================
 
 We are not using PR from github but the review system from Software
-Factory at http://softwarefactory.enovance.com/. So feel free to
+Factory at http://softwarefactory-project.io/. So feel free to
 submit reviews.
