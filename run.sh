@@ -32,7 +32,7 @@ name=$(basename $(dirname $urlpath))
 
 mkdir -p $top/srpms/$name/$date
 cd $top/srpms/$name/$date
-wget --level=1 --recursive --no-parent --no-clobber --accept 'src.rpm' http://$urlpath
+wget --level=1 --recursive --no-parent --no-clobber --accept 'src.rpm' -X 'rhel-osp-director-images*' -X 'rhosp-director-images-*' http://$urlpath
 
 resultdir=$top/results/$name/$date
 mkdir -p $resultdir

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2015 Red Hat Inc.
+# Copyright (C) 2015-2017 Red Hat Inc.
 #
 # Author: Frederic Lepied <frederic.lepied@redhat.com>
 #
@@ -15,6 +15,14 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
+if [ ! -d .venv/bin ]; then
+    virtualenv .venv
+fi
+
+. .venv/bin/activate
+
+pip install nose
 
 nosetests
 
