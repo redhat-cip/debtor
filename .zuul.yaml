@@ -2,10 +2,7 @@
     name: debtor
     check:
       jobs:
-        - tox-py27
+        - noop
     gate:
       jobs:
-        - tox-py27
-    periodic:
-      jobs:
-        - tox-py27
+        - noop
